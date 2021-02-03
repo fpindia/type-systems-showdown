@@ -138,3 +138,115 @@ function processState(state : State) {
 processState({ msg: "unknown error", error: "1" });
 ```
 
+## Variants
+
+Typescript supports Variants natively with untagged unions as shown in the previous examples.
+Purescript can have variants with the [Purescript-variant](https://github.com/natefaubion/purescript-variant) library.
+
+**TODO: Elaborate.**
+
+Challenge - declare a type which is similar to a previously defined type, but excludes a variant branch.
+
+More specifically, given a type -
+
+```purescript
+data T = A | B | C Int
+```
+
+Now define a type function to generate a type U which is equivalent to a type -
+
+```purescript
+data U = B | C Int
+```
+
+In Typescript you can define the second type in terms of the first like this -
+```typescript
+type U = Exclude<T, 'a'>
+const f = (t: T): U => t === 'A' ? 'B' : t
+```
+
+[Try it online!](https://www.typescriptlang.org/play?#code/C4TwDgpgBAKlC8UDkBBJUA+yBC6sG0kBhJAGigDsBXAWwCMIAnAXQChXRIoBVBKAUQAeAYwA2VACYQAPDHKokAPnbCA9hQDOwKADM+ACmAAuWAEoTveIqjb4d5GigB+HOhPAgA)
+
+In Purescript we can denote the general relationship between any two data variants as long as the first has the field `A` and the second has the corresponding field `B` -
+```purescript
+_A = (SProxy :: _ “A”)
+_B = (SProxy :: _ “B”)
+f :: forall r. Variant (A::String | r) -> Variant (B::String | r)
+f = on _A (inj _B) identity
+```
+
+## Records
+
+Homogenous records Challenge! - Write a function signature where the input is some arbitrary record and the output is a record with the same fields but all types converted to Number -
+
+Typescript version uses [Index types](https://www.typescriptlang.org/docs/handbook/advanced-types.html#index-types)
+```typescript
+const f = <O>(_: {[K in keyof O]: number}) => ...
+```
+
+[Try it online!](https://www.typescriptlang.org/play?#code/MYewdgzgLgBAhgLhgbzHAtgUydATgSzAHMAaeI7GMAV3QCNNcBfGAXhTSyQHIAzEENzJwKSAEwAGJgG4AULNCRYqDJQD6ZAHTbcmaC3ZwF4aDF5sYAHgDyMTAA8omMABMIMamADWYEAHcwAD4ACjUkZABtAGkYQhgvTABPEHNrAF0kGnpGJgBKNkCUJlleYN1oXKA)
+
+Challenge: Represent a record that does *NOT* have a particular label -
+
+Typescript version uses `never`. The following function will not accept a record with field `foo`.
+```typescript
+const f = (_: Record<string, number> & {foo?: never}) => {}
+```
+
+[Try it online!](https://www.typescriptlang.org/play?#code/MYewdgzgLgBAZjAvDAFAfQFwwEoFNQBOAJgDzQECWYA5gDQxgCuAtgEa4EB8MAZDAN5wQIAPxYwuAG4cAvgEok3fjIBQKuCmVz1mgIZYAjPJ2Dhh+UA)
+
+Challenge: Represent a record which is the union of two arbitrary records -
+
+Typescript again uses index types to great effect! The following function will accept three records where the third must necessarily be a union of the first two -
+```typescript
+const f = <A extends unknown>(a: A, b: {[K in keyof A]: A[K] | null}) => {}
+```
+
+[Try it online!](https://www.typescriptlang.org/play?#code/MYewdgzgLgBAZjAvDAPAQRgUwB5U2AEwhgFcwBrMEAdzAD4AKAQwC4Y0AaGAIzYG8A2gGkYASzAxymAJ4gEaALps0whTAA+MMCQA2OgL4BKJHRh99AKAtwGfOCBBsAjF25MATmwDk0d+IDmXvpcdg5s2nquHt5u7kGG1rb2jjAuPNEwPlB+YIHBZsneETpeUZ6ZsfGJoSlpsd6+AUEhhVq6Bgk2Nc5lDdlN+Xz1FR7xQA)
+
+
+## Dynamic record manipulation
+
+Challenge: Can we add fields dynamically, and have them be tracked? For example, can you write a function `addField :: Record -> String -> a -> Record` so that the output record is the input record with a field added?
+
+Typescript can do it but by using records instead of fieldnames.
+
+So this doesn't work -
+```typescript
+const add = <O, K extends string, V>(o: O, k: K, v: V): O & {[K]: V} => ({...o, [k]: v})
+const set = <O, K extends keyof O>(o: O, k: K, v: O[K]): O => ({...o, [k]: v})
+const res = set(add({a:1, c:'as'}, 'b', 3), 'b', 33)
+console.log(res)
+```
+
+But this does -
+```typescript
+const add = <A, B>(a: A, b: B) => ({...a, ...b})
+const set = <O, K extends keyof O>(o: O, k: K, v: O[K]): O => ({...o, [k]: v})
+const res = set(add({a:1, c:'as'}, {b: 3}), 'b', 33)
+const res2 = set(add({a:1, c:'as'}, {b: 3}), 'c', 33) // fails
+const res3 = set(add({a:1, c:'as'}, {b: 3}), 'c', 'string works')
+const res4 = set(add({a:1, c:'as'}, {b: 3}), 'd', 'string works') // fails
+```
+
+## Dynamic Record fieldname manipulation
+
+One of the newer shiny things in typescript is `Uppercase`, `Capitalise` etc.
+
+E.g. -
+```typescript
+type A = Uppercase<'foo'> // Is the same as type A = 'FOO'
+```
+
+Also you can do -
+```typescript
+type Getter<A extends string> = `get${Capitalize<A>} `
+type B = Getter<'fooBar'> // Becomes 'getFooBar'
+
+// And use `never` to disallow
+type FromGetter<A extends string> = A extends get${infer B} ? Uncapitalize<B> : never 
+type C = FromGetter<'willFail'> 
+type D = FromGetter<'getThisWillWork'>;
+```
+
+Dynamic field manipulation is possible in Purescript as well but clunkier. See for example https://qiita.com/kimagure/items/4f5c6054870f631ff768.
