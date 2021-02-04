@@ -1,6 +1,10 @@
 # type-systems-showdown
 A wide ranging comparison-by-example of the typesystem features in various FP languages. Initially Purescript and Typescript.
 
+The aim is compare the things that overlap. We don't want this comparison table to turn into this -
+
+![Compare appliances](https://imgs.xkcd.com/comics/appliances_2x.png)
+
 ## Untagged unions and friends
 
 Purescript doesn't support untagged unions. But it can do something similar with a [library](https://github.com/jvliwanag/purescript-untagged-union). TODO: Comapre and contrast with Typescript.
